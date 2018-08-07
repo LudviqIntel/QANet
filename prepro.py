@@ -1,10 +1,17 @@
 import tensorflow as tf
+# random module is used for generating random numbers
 import random
+# tqdm module is used for show the progress bar
 from tqdm import tqdm
+# spacy is a module used for NLP
 import spacy
+# ujson is used like json
 import ujson as json
+# collections module hold some interntic things
 from collections import Counter
+# numpy module has some mathemetics rules
 import numpy as np
+# codecs module is used for code coversion
 from codecs import open
 
 '''
@@ -12,14 +19,17 @@ This file is taken and modified from R-Net by HKUST-KnowComp
 https://github.com/HKUST-KnowComp/R-Net
 '''
 
+# create a blank spacy model of English
 nlp = spacy.blank("en")
 
-
+# //Tokenization//convert the sentence to token
 def word_tokenize(sent):
+    # create a doc that can be visualized 
     doc = nlp(sent)
+    # return the token's text info trained by the nlp model
     return [token.text for token in doc]
 
-
+# number all the index of token of the tokens from the context, return the list of the pairs
 def convert_idx(text, tokens):
     current = 0
     spans = []
@@ -32,56 +42,83 @@ def convert_idx(text, tokens):
         current += len(token)
     return spans
 
-
+#
 def process_file(filename, data_type, word_counter, char_counter):
     print("Generating {} examples...".format(data_type))
     examples = []
     eval_examples = {}
     total = 0
+    # use with operation to make sure we will close the file path whatever happened
     with open(filename, "r") as fh:
         source = json.load(fh)
+        # use tqdm to show the process when it read the data from the file
         for article in tqdm(source["data"]):
             for para in article["paragraphs"]:
+                # first replace ''and``to "
                 context = para["context"].replace(
                     "''", '" ').replace("``", '" ')
+                # tokenization the context
                 context_tokens = word_tokenize(context)
+                # listen the token from context
                 context_chars = [list(token) for token in context_tokens]
+                # number all the index of token of the tokens from the context
                 spans = convert_idx(context, context_tokens)
+                # add the qas addition to token and char, like add the influence to them form the qas part
                 for token in context_tokens:
                     word_counter[token] += len(para["qas"])
                     for char in token:
                         char_counter[char] += len(para["qas"])
+                # for each question from qas part
                 for qa in para["qas"]:
                     total += 1
+                    # freash the question by replacing ''and `` to "???Englishen???
                     ques = qa["question"].replace(
                         "''", '" ').replace("``", '" ')
+                    # tokenization the question
                     ques_tokens = word_tokenize(ques)
+                    # listen the token from the tokens from the question
                     ques_chars = [list(token) for token in ques_tokens]
+                    # add the influence to the tokens and chars of the question
                     for token in ques_tokens:
                         word_counter[token] += 1
                         for char in token:
                             char_counter[char] += 1
+                    # deal with the answer
                     y1s, y2s = [], []
                     answer_texts = []
+                    # under a question ,we can find some answers
                     for answer in qa["answers"]:
+                        # get the answer text
                         answer_text = answer["text"]
+                        # get the answer start???means what???
                         answer_start = answer['answer_start']
+                        # get where answer end
                         answer_end = answer_start + len(answer_text)
+                        # it must have a magical format, we can get the answer from that in this way
                         answer_texts.append(answer_text)
+                        # find where the answer is
                         answer_span = []
                         for idx, span in enumerate(spans):
+                            # if answer_end's position is bigger than this span's start, and litter than this span's end, means it is in this span
                             if not (answer_end <= span[0] or answer_start >= span[1]):
+                                # then add the index of this span to remember this answer's position in the answer_span
                                 answer_span.append(idx)
+                        # save the start position of every answer in the context and the end position in the context in two arrays 
                         y1, y2 = answer_span[0], answer_span[-1]
                         y1s.append(y1)
-                        y2s.append(y2)
+                        y2s.append(y2) 
                     example = {"context_tokens": context_tokens, "context_chars": context_chars, "ques_tokens": ques_tokens,
                                "ques_chars": ques_chars, "y1s": y1s, "y2s": y2s, "id": total}
+                    # save an example in a specific format
                     examples.append(example)
+                    # in one question, save it(context, the answer and the id in(or from) this context, so it means without question???)
                     eval_examples[str(total)] = {
                         "context": context, "spans": spans, "answers": answer_texts, "uuid": qa["id"]}
+        # line(or arrange) the examples
         random.shuffle(examples)
+        # print the total number of the questions(one question can have several answers, but placed them in one example)
         print("{} questions in total".format(len(examples)))
+    # return the examples, and the eval_examples
     return examples, eval_examples
 
 
