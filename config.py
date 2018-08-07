@@ -1,11 +1,13 @@
+# os part offers the API to the operating system
 import os
+# tensorflow offers the API of some useful functions
 import tensorflow as tf
 
 '''
 This file is taken and modified from R-Net by HKUST-KnowComp
 https://github.com/HKUST-KnowComp/R-Net
 '''
-
+# prepro may be a module from tf-layer, and means for preprocess 
 from prepro import prepro
 from main import train, test, demo
 
