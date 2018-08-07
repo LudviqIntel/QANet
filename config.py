@@ -7,18 +7,25 @@ import tensorflow as tf
 This file is taken and modified from R-Net by HKUST-KnowComp
 https://github.com/HKUST-KnowComp/R-Net
 '''
-# prepro may be a module from tf-layer, and means for preprocess 
+# prepro is a module from this project 
 from prepro import prepro
+# main is a module from this project
 from main import train, test, demo
 
+# flags can be used to pass some parameters
+# falgs.py is used to parasing the commend lines parameters
 flags = tf.flags
 
+# get the current working log
 home = os.getcwd()
+# create a new path
 train_file = os.path.join(home, "datasets", "squad", "train-v1.1.json")
 dev_file = os.path.join(home, "datasets", "squad", "dev-v1.1.json")
+# ???
 test_file = os.path.join(home, "datasets", "squad", "dev-v1.1.json")
 glove_word_file = os.path.join(home, "datasets", "glove", "glove.840B.300d.txt")
 
+# make sure that FRC path exits
 train_dir = "train"
 model_name = "FRC"
 dir_name = os.path.join(train_dir, model_name)
@@ -26,6 +33,7 @@ if not os.path.exists(train_dir):
     os.mkdir(train_dir)
 if not os.path.exists(os.path.join(os.getcwd(),dir_name)):
     os.mkdir(os.path.join(os.getcwd(),dir_name))
+
 target_dir = "data"
 log_dir = os.path.join(dir_name, "event")
 save_dir = os.path.join(dir_name, "model")
@@ -53,6 +61,7 @@ if not os.path.exists(save_dir):
 if not os.path.exists(answer_dir):
     os.makedirs(answer_dir)
 
+# using DEFINE_string to define the analytical rules
 flags.DEFINE_string("mode", "train", "Running mode train/debug/test")
 
 flags.DEFINE_string("target_dir", target_dir, "Target directory for out data")
@@ -92,14 +101,18 @@ flags.DEFINE_integer("char_limit", 16, "Limit length for character")
 flags.DEFINE_integer("word_count_limit", -1, "Min count for word")
 flags.DEFINE_integer("char_count_limit", -1, "Min count for char")
 
+# ???
 flags.DEFINE_integer("capacity", 15000, "Batch size of dataset shuffle")
 flags.DEFINE_integer("num_threads", 4, "Number of threads in input pipeline")
 flags.DEFINE_boolean("is_bucket", False, "build bucket batch iterator or not")
 flags.DEFINE_list("bucket_range", [40, 401, 40], "the range of bucket")
 
+# ???
 flags.DEFINE_integer("batch_size", 32, "Batch size")
 flags.DEFINE_integer("num_steps", 60000, "Number of steps")
+# ???
 flags.DEFINE_integer("checkpoint", 1000, "checkpoint to save and evaluate the model")
+# ???...
 flags.DEFINE_integer("period", 100, "period to save batch loss")
 flags.DEFINE_integer("val_num_batches", 150, "Number of batches to evaluate the model")
 flags.DEFINE_float("dropout", 0.1, "Dropout prob across the layers")
@@ -120,7 +133,8 @@ fasttext_file = os.path.join(home, "data", "fasttext", "wiki-news-300d-1M.vec")
 flags.DEFINE_string("fasttext_file", fasttext_file, "Fasttext word embedding source file")
 flags.DEFINE_boolean("fasttext", False, "Whether to use fasttext")
 
-
+# just define a function
+# ???use for modify the module's type and run the specific functions
 def main(_):
     config = flags.FLAGS
     if config.mode == "train":
@@ -143,4 +157,5 @@ def main(_):
 
 
 if __name__ == "__main__":
+    # use thid function th parising the parameters and then carried out the main function
     tf.app.run()
