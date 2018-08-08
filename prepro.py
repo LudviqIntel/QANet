@@ -42,7 +42,7 @@ def convert_idx(text, tokens):
         current += len(token)
     return spans
 
-#
+# get the data to token and save them as example
 def process_file(filename, data_type, word_counter, char_counter):
     print("Generating {} examples...".format(data_type))
     examples = []
@@ -121,33 +121,45 @@ def process_file(filename, data_type, word_counter, char_counter):
     # return the examples, and the eval_examples
     return examples, eval_examples
 
-
+# 
 def get_embedding(counter, data_type, limit=-1, emb_file=None, size=None, vec_size=None):
+    # saying embedding whta kind of data, like training data or validation data?
     print("Generating {} embedding...".format(data_type))
     embedding_dict = {}
+    # ???
     filtered_elements = [k for k, v in counter.items() if v > limit]
+    # assert the emb_file conf is exit
     if emb_file is not None:
         assert size is not None
         assert vec_size is not None
         with open(emb_file, "r", encoding="utf-8") as fh:
             for line in tqdm(fh, total=size):
                 array = line.split()
+                # add the array part splited the vector to word前面是word
                 word = "".join(array[0:-vec_size])
+                # deal with the vector part, map each one in array to float format, and turn the type from tuple to list后面是vector  
                 vector = list(map(float, array[-vec_size:]))
+                # ???may be want to label the word using vector
                 if word in counter and counter[word] > limit:
                     embedding_dict[word] = vector
+        # ???print the embedding and filtered things' number together
         print("{} / {} tokens have corresponding {} embedding vector".format(
             len(embedding_dict), len(filtered_elements), data_type))
     else:
         assert vec_size is not None
         for token in filtered_elements:
+            # _ is just a label for each thing
+            # np.random.normal is outputing a number fitting Gaussion Distribution, scale=0.1 means the distribution's width is little
+            # randomly generate a list, for each filtered_elements generate a  vector_size length number list
             embedding_dict[token] = [np.random.normal(
                 scale=0.1) for _ in range(vec_size)]
+        # ???without emb_file, we create the vector 
         print("{} tokens have corresponding embedding vector".format(
             len(filtered_elements)))
 
     NULL = "--NULL--"
     OOV = "--OOV--"
+    # 
     token2idx_dict = {token: idx for idx,
                       token in enumerate(embedding_dict.keys(), 2)}
     token2idx_dict[NULL] = 0
