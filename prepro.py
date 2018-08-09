@@ -121,9 +121,9 @@ def process_file(filename, data_type, word_counter, char_counter):
     # return the examples, and the eval_examples
     return examples, eval_examples
 
-# 
+# saving the vextor and their position???
 def get_embedding(counter, data_type, limit=-1, emb_file=None, size=None, vec_size=None):
-    # saying embedding whta kind of data, like training data or validation data?
+    # saying embedding what kind of data, like training data or validation data?
     print("Generating {} embedding...".format(data_type))
     embedding_dict = {}
     # ???
@@ -159,46 +159,66 @@ def get_embedding(counter, data_type, limit=-1, emb_file=None, size=None, vec_si
 
     NULL = "--NULL--"
     OOV = "--OOV--"
-    # 
-    token2idx_dict = {token: idx for idx,
-                      token in enumerate(embedding_dict.keys(), 2)}
+    # embedding_dict save the things from word to vector, like dimensionality reduction
+    # enumerate the things from the embedding_dict's keys, and start the idx from two
+    # by using keys(), we will get all the keys in the dict by a list, and 
+    # then enum them, like they have their number position, and then get them from the first one
+    # so the token is the key in embedding_dict, as means the word(or the vector), and the idx is the enum number just got
+    # and them save them in ——token:idx—— way
+    token2idx_dict = {token: idx for idx,token in enumerate(embedding_dict.keys(), 2)}
+    # save two before the words from the embedding_dict
     token2idx_dict[NULL] = 0
     token2idx_dict[OOV] = 1
+    # also create two things in the embedding_dict using random number create the vector
     embedding_dict[NULL] = [0. for _ in range(vec_size)]
     embedding_dict[OOV] = [0. for _ in range(vec_size)]
+    # reverse the dict just got, and create a new dict saving idx and the vector that the token towards
     idx2emb_dict = {idx: embedding_dict[token]
                     for token, idx in token2idx_dict.items()}
+    # create a list by using the vector from the dict just got, and maybe means saving all the vector
     emb_mat = [idx2emb_dict[idx] for idx in range(len(idx2emb_dict))]
+    # return the vector list and the token:idx dict
     return emb_mat, token2idx_dict
 
+# 
 def convert_to_features(config, data, word2idx_dict, char2idx_dict):
-
+    
     example = {}
     context, question = data
     context = context.replace("''", '" ').replace("``", '" ')
     question = question.replace("''", '" ').replace("``", '" ')
+    # tokenize the context and question
     example['context_tokens'] = word_tokenize(context)
     example['ques_tokens'] = word_tokenize(question)
+    # characterize the context and question by listen the token just got
     example['context_chars'] = [list(token) for token in example['context_tokens']]
     example['ques_chars'] = [list(token) for token in example['ques_tokens']]
 
-    para_limit = config.test_para_limit
-    ques_limit = config.test_ques_limit
-    ans_limit = 100
-    char_limit = config.char_limit
+    para_limit = config.test_para_limit# 1000--Limit length for paragraph in test file
+    ques_limit = config.test_ques_limit# 100--Limit length for question in test file
+    ans_limit = 100# maybe limit length for ans
+    char_limit = config.char_limit# 16--Limit length for character
 
+    # check if the word number in paragraph or the word number in question is larger than the limit
     def filter_func(example):
         return len(example["context_tokens"]) > para_limit or \
                len(example["ques_tokens"]) > ques_limit
 
+    # if the example's length is not in the limit, raise an error
     if filter_func(example):
         raise ValueError("Context/Questions lengths are over the limit")
 
+    # create an array that length is the para_limit with all thing is zero
     context_idxs = np.zeros([para_limit], dtype=np.int32)
+    # create a matrix that size is para_limit(==word number of a paragraph)*char_limit(==char number of a word), so it also means it create a matrix with zero
     context_char_idxs = np.zeros([para_limit, char_limit], dtype=np.int32)
+    # create an array that length is ques_limit
     ques_idxs = np.zeros([ques_limit], dtype=np.int32)
+    # create a matrix that size is ques_limit(==word number of a question)*char_limit(==char number of a word)
     ques_char_idxs = np.zeros([ques_limit, char_limit], dtype=np.int32)
+    # create an array that length is para_limit
     y1 = np.zeros([para_limit], dtype=np.float32)
+    # create ana array that length is para_limit
     y2 = np.zeros([para_limit], dtype=np.float32)
 
     def _get_word(word):
