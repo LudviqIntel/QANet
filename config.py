@@ -7,6 +7,7 @@ import tensorflow as tf
 This file is taken and modified from R-Net by HKUST-KnowComp
 https://github.com/HKUST-KnowComp/R-Net
 '''
+
 # prepro is a module from this project 
 from prepro import prepro
 # main is a module from this project
