@@ -221,17 +221,20 @@ def convert_to_features(config, data, word2idx_dict, char2idx_dict):
     # create ana array that length is para_limit
     y2 = np.zeros([para_limit], dtype=np.float32)
 
+    # find the word's position
     def _get_word(word):
         for each in (word, word.lower(), word.capitalize(), word.upper()):
             if each in word2idx_dict:
                 return word2idx_dict[each]
         return 1
 
+    # find the char's position(concern about the upper or lower type?)
     def _get_char(char):
         if char in char2idx_dict:
             return char2idx_dict[char]
         return 1
 
+    # fullfill all the arrays or matrixs by position or idx//add all the word's position to the array
     for i, token in enumerate(example["context_tokens"]):
         context_idxs[i] = _get_word(token)
 
@@ -252,26 +255,35 @@ def convert_to_features(config, data, word2idx_dict, char2idx_dict):
 
     return context_idxs, context_char_idxs, ques_idxs, ques_char_idxs
 
+# 
 def build_features(config, examples, data_type, out_file, word2idx_dict, char2idx_dict, is_test=False):
 
+    # test_para_limit=1000, para_limit=400
+    # test_ques_limit=100,ques_limit=50
+    # ans_limit=30
+    # char_limit=16
     para_limit = config.test_para_limit if is_test else config.para_limit
     ques_limit = config.test_ques_limit if is_test else config.ques_limit
     ans_limit = 100 if is_test else config.ans_limit
     char_limit = config.char_limit
 
+    # test if context_tokens is longer than para_limit, or ques_tokens is longer than ques_limit, or things of para's size is greater than the ans_limit
     def filter_func(example, is_test=False):
         return len(example["context_tokens"]) > para_limit or \
                len(example["ques_tokens"]) > ques_limit or \
                (example["y2s"][0] - example["y1s"][0]) > ans_limit
 
     print("Processing {} examples...".format(data_type))
+    # a class to output the record
     writer = tf.python_io.TFRecordWriter(out_file)
     total = 0
     total_ = 0
     meta = {}
+    # for each thing in the examples(?)
     for example in tqdm(examples):
         total_ += 1
 
+        # if their is something that larger than the limit, just continue, and not do the follow
         if filter_func(example, is_test):
             continue
 
@@ -283,38 +295,46 @@ def build_features(config, examples, data_type, out_file, word2idx_dict, char2id
         y1 = np.zeros([para_limit], dtype=np.float32)
         y2 = np.zeros([para_limit], dtype=np.float32)
 
+        # return the idx of the word no matter what format
         def _get_word(word):
             for each in (word, word.lower(), word.capitalize(), word.upper()):
                 if each in word2idx_dict:
                     return word2idx_dict[each]
             return 1
 
+        # return the char's idx
         def _get_char(char):
             if char in char2idx_dict:
                 return char2idx_dict[char]
             return 1
 
+        # get the idx of context
         for i, token in enumerate(example["context_tokens"]):
             context_idxs[i] = _get_word(token)
 
+        # get the idx of each token in ques
         for i, token in enumerate(example["ques_tokens"]):
             ques_idxs[i] = _get_word(token)
 
+        # get the idx of chars in context
         for i, token in enumerate(example["context_chars"]):
             for j, char in enumerate(token):
                 if j == char_limit:
                     break
                 context_char_idxs[i, j] = _get_char(char)
 
+        # get the idx of chars in ques
         for i, token in enumerate(example["ques_chars"]):
             for j, char in enumerate(token):
                 if j == char_limit:
                     break
                 ques_char_idxs[i, j] = _get_char(char)
 
+        # ???for what???
         start, end = example["y1s"][-1], example["y2s"][-1]
         y1[start], y2[end] = 1.0, 1.0
 
+        # ??? make these idx to string and to byte
         record = tf.train.Example(features=tf.train.Features(feature={
                                   "context_idxs": tf.train.Feature(bytes_list=tf.train.BytesList(value=[context_idxs.tostring()])),
                                   "ques_idxs": tf.train.Feature(bytes_list=tf.train.BytesList(value=[ques_idxs.tostring()])),
@@ -324,6 +344,7 @@ def build_features(config, examples, data_type, out_file, word2idx_dict, char2id
                                   "y2": tf.train.Feature(bytes_list=tf.train.BytesList(value=[y2.tostring()])),
                                   "id": tf.train.Feature(int64_list=tf.train.Int64List(value=[example["id"]]))
                                   }))
+        # save the record
         writer.write(record.SerializeToString())
     print("Built {} / {} instances of features in total".format(total, total_))
     meta["total"] = total
@@ -337,9 +358,10 @@ def save(filename, obj, message=None):
         with open(filename, "w") as fh:
             json.dump(obj, fh)
 
-
+# 
 def prepro(config):
     word_counter, char_counter = Counter(), Counter()
+    # get them to tkens and save them as example
     train_examples, train_eval = process_file(
         config.train_file, "train", word_counter, char_counter)
     dev_examples, dev_eval = process_file(
@@ -347,11 +369,16 @@ def prepro(config):
     test_examples, test_eval = process_file(
         config.test_file, "test", word_counter, char_counter)
 
+    # fasettext=False, glove_word_file=glove.840B.300d.txt, fasttext_file is wiki-news-300d-1M.vec
     word_emb_file = config.fasttext_file if config.fasttext else config.glove_word_file
+    # pretrained_char=False, glove_char_file=glove.840B.300d-char.txt
     char_emb_file = config.glove_char_file if config.pretrained_char else None
+    # pretrained_char=False, glove_char_size=94
     char_emb_size = config.glove_char_size if config.pretrained_char else None
+    # pretrained_char=False, glove_dim=300
     char_emb_dim = config.glove_dim if config.pretrained_char else config.char_dim
 
+    # 
     word_emb_mat, word2idx_dict = get_embedding(
         word_counter, "word", emb_file=word_emb_file, size=config.glove_word_size, vec_size=config.glove_dim)
     char_emb_mat, char2idx_dict = get_embedding(
