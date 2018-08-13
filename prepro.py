@@ -358,12 +358,23 @@ def save(filename, obj, message=None):
         with open(filename, "w") as fh:
             json.dump(obj, fh)
 
-# 
+# use config to do prepro
 def prepro(config):
+    # create two counter to count the time each letter(or word or char) attend
     word_counter, char_counter = Counter(), Counter()
-    # get them to tkens and save them as example
+    
+    # process_file: get them to tokens and save them as example
+    # train_file:train-v1.1.json
+    # dev_file:dev-v1.1.json
+    # test_file:dev-v1.1.json
+    
+    #   in this function, we input the train-v1.1.json, and deal with the train data, also input two counters just created
+    #   in detail:
+    #             if we see tqdm, that means we see a process to deal with the a piece of data
+    #             
     train_examples, train_eval = process_file(
         config.train_file, "train", word_counter, char_counter)
+    
     dev_examples, dev_eval = process_file(
         config.dev_file, "dev", word_counter, char_counter)
     test_examples, test_eval = process_file(
