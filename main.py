@@ -1,4 +1,5 @@
 import tensorflow as tf
+# json means a way to trans data
 import ujson as json
 import numpy as np
 from tqdm import tqdm
@@ -10,6 +11,7 @@ https://github.com/HKUST-KnowComp/R-Net
 '''
 
 
+# model is a py file in this project
 from model import Model
 from demo import Demo
 from util import get_record_parser, convert_tokens, evaluate, get_batch_dataset, get_dataset
