@@ -1,5 +1,6 @@
 import tensorflow as tf
-from layers import initializer, regularizer, residual_block, highway, conv, mask_logits, trilinear, total_params, optimized_trilinear_for_attention
+from layers import initializer, regularizer, residual_block, highway, conv, mask_logits, trilinear, 
+                   total_params, optimized_trilinear_for_attention
 
 class Model(object):
     def __init__(self, config, batch, word_mat=None, char_mat=None, trainable=True, opt=True, demo = False, graph = None):
@@ -67,11 +68,16 @@ class Model(object):
 
     def forward(self):
         config = self.config
-        N, PL, QL, CL, d, dc, nh = config.batch_size if not self.demo else 1, self.c_maxlen, self.q_maxlen, config.char_limit, config.hidden, config.char_dim, config.num_heads
+        N, PL,            QL,            CL,                d,             dc,              nh = config.batch_size if not self.demo else 
+	1, self.c_maxlen, self.q_maxlen, config.char_limit, config.hidden, config.char_dim, config.num_heads
 
         with tf.variable_scope("Input_Embedding_Layer"):
+	    # context format definer
             ch_emb = tf.reshape(tf.nn.embedding_lookup(
                 self.char_mat, self.ch), [N * PL, CL, dc])
+	
+	
+            # question define
             qh_emb = tf.reshape(tf.nn.embedding_lookup(
                 self.char_mat, self.qh), [N * QL, CL, dc])
             ch_emb = tf.nn.dropout(ch_emb, 1.0 - 0.5 * self.dropout)
