@@ -5,14 +5,22 @@ import tensorflow as tf
 import numpy as np
 import math
 
+# achieve deep RNN(RNN cells composed sequentially of multiple simple cells)
 from tensorflow.contrib.rnn import MultiRNNCell
+#  has a state and performs some operation that takes a matrix of inputs
 from tensorflow.contrib.rnn import RNNCell
 
+# nest is work for nested sequences of elements
 from tensorflow.python.util import nest
+# Basic arithmetic operators.
 from tensorflow.python.ops import math_ops
+# support for manipulating tensors
 from tensorflow.python.ops import array_ops
+# init the tensor
 from tensorflow.python.ops import init_ops
+# wrap primitive neural net
 from tensorflow.python.ops import nn_ops
+# 
 from tensorflow.python.ops import clip_ops
 
 from functools import reduce
