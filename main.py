@@ -18,6 +18,7 @@ from util import get_record_parser, convert_tokens, evaluate, get_batch_dataset,
 
 
 def train(config):
+    # read things from each file
     with open(config.word_emb_file, "r") as fh:
         word_mat = np.array(json.load(fh), dtype=np.float32)
     with open(config.char_emb_file, "r") as fh:
@@ -31,12 +32,15 @@ def train(config):
 
     dev_total = meta["total"]
     print("Building model...")
+    # read some features
     parser = get_record_parser(config)
     graph = tf.Graph()
     with graph.as_default() as g:
+        # read the files and make them like batch
         train_dataset = get_batch_dataset(config.train_record_file, parser, config)
         dev_dataset = get_dataset(config.dev_record_file, parser, config)
         handle = tf.placeholder(tf.string, shape=[])
+        # iterator(diedaiqi)
         iterator = tf.data.Iterator.from_string_handle(
             handle, train_dataset.output_types, train_dataset.output_shapes)
         train_iterator = train_dataset.make_one_shot_iterator()
@@ -44,7 +48,9 @@ def train(config):
 
         model = Model(config, iterator, word_mat, char_mat, graph = g)
 
+        # assign the source and allow tf to assign the source
         sess_config = tf.ConfigProto(allow_soft_placement=True)
+        # assign little GPU first, and add the source step by step
         sess_config.gpu_options.allow_growth = True
 
         loss_save = 100.0
@@ -53,11 +59,15 @@ def train(config):
         best_em = 0.
 
         with tf.Session(config=sess_config) as sess:
+            # write log to this place
             writer = tf.summary.FileWriter(config.log_dir)
+            
             sess.run(tf.global_variables_initializer())
             saver = tf.train.Saver()
+            # determine to choose which handle
             train_handle = sess.run(train_iterator.string_handle())
             dev_handle = sess.run(dev_iterator.string_handle())
+            
             if os.path.exists(os.path.join(config.save_dir, "checkpoint")):
                 saver.restore(sess, tf.train.latest_checkpoint(config.save_dir))
             global_step = max(sess.run(model.global_step), 1)
