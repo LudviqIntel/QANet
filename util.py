@@ -8,12 +8,16 @@ This file is taken and modified from R-Net by HKUST-KnowComp
 https://github.com/HKUST-KnowComp/R-Net
 '''
 
-
+# read the thing
 def get_record_parser(config, is_test=False):
     def parse(example):
+        # config.test_para_limit=1000, config.para_limit=400
         para_limit = config.test_para_limit if is_test else config.para_limit
+        # config.test_ques_limit=100, config.ques_limit=50
         ques_limit = config.test_ques_limit if is_test else config.ques_limit
+        # config.char_limit=16
         char_limit = config.char_limit
+        # parse the Example protocol memory block(from TFRecord file) into tensor
         features = tf.parse_single_example(example,
                                            features={
                                                "context_idxs": tf.FixedLenFeature([], tf.string),
@@ -24,6 +28,7 @@ def get_record_parser(config, is_test=False):
                                                "y2": tf.FixedLenFeature([], tf.string),
                                                "id": tf.FixedLenFeature([], tf.int64)
                                            })
+        # get the thing of each part
         context_idxs = tf.reshape(tf.decode_raw(
             features["context_idxs"], tf.int32), [para_limit])
         ques_idxs = tf.reshape(tf.decode_raw(
@@ -42,39 +47,55 @@ def get_record_parser(config, is_test=False):
 
 
 def get_batch_dataset(record_file, parser, config):
+    # config.num_threads=4， create a constant
     num_threads = tf.constant(config.num_threads, dtype=tf.int32)
+    # read the TFRecord, and the each para of this dataset is an example
+    # config.capacity=15000
+    # ???
     dataset = tf.data.TFRecordDataset(record_file).map(
         parser, num_parallel_calls=num_threads).shuffle(config.capacity).repeat()
+    # config.is_bucket=False, config.bucket_range=[40,401,40]
     if config.is_bucket:
+        # create an array size is 40???
         buckets = [tf.constant(num) for num in range(*config.bucket_range)]
-
+        
         def key_func(context_idxs, ques_idxs, context_char_idxs, ques_char_idxs, y1, y2, qa_id):
+            # trans all context_idxs to bool, then to int, and add them all
             c_len = tf.reduce_sum(
                 tf.cast(tf.cast(context_idxs, tf.bool), tf.int32))
+            # normaliza the buckets's range to 0-c_len(just got)
             t = tf.clip_by_value(buckets, 0, c_len)
+            # return the max's idx
             return tf.argmax(t)
 
+        # config.batch_size=32, and make the element like a series of batchs
         def reduce_func(key, elements):
             return elements.batch(config.batch_size)
 
+        # ？？？
         dataset = dataset.apply(tf.contrib.data.group_by_window(
             key_func, reduce_func, window_size=5 * config.batch_size)).shuffle(len(buckets) * 25)
     else:
+        # config.batch_size=32
         dataset = dataset.batch(config.batch_size)
     return dataset
 
-
+#???
 def get_dataset(record_file, parser, config):
+    # config.num_threads=4
     num_threads = tf.constant(config.num_threads, dtype=tf.int32)
+    # get the date of record_dataset
     dataset = tf.data.TFRecordDataset(record_file).map(
         parser, num_parallel_calls=num_threads).repeat().batch(config.batch_size)
     return dataset
 
-
+# use start_idx and end_idx to map the thing from context to answer_dict and remapped_dict
 def convert_tokens(eval_file, qa_id, pp1, pp2):
     answer_dict = {}
     remapped_dict = {}
+    # zhuanzhi to tuple format
     for qid, p1, p2 in zip(qa_id, pp1, pp2):
+        # get things
         context = eval_file[str(qid)]["context"]
         spans = eval_file[str(qid)]["spans"]
         uuid = eval_file[str(qid)]["uuid"]
